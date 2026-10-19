@@ -1,4 +1,4 @@
-VERSION=0.1
+VERSION=1.0
 
 all: demuxolotl
 
@@ -6,4 +6,4 @@ demuxolotl:
 	@echo "Compiling demuxolotl"
 	mkdir -p bin/
 	rm -f bin/demuxolotl
-	go build -ldflags="-s -w" -o bin/demuxolotl main.go decoder.go io.go pamld.go
+	go build -ldflags="-X cmd/cmd.VERSION=$(VERSION) -s -w" -o bin/demuxolotl

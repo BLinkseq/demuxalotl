@@ -1,4 +1,4 @@
-package main
+package demux
 
 import (
 	_ "embed"
@@ -132,7 +132,7 @@ var defaultSchema []byte
 // default schema when path is empty.
 func loadConfig(path string) (decs []*decoder, r1Start int, err error) {
 	data := defaultSchema
-	if path != "" {
+	if path != "use embedded" {
 		if data, err = os.ReadFile(path); err != nil {
 			return nil, 0, err
 		}
