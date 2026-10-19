@@ -18,7 +18,7 @@ var rootCmd = &cobra.Command{
 	Use:                   "demuxolotl [options] prefix R1.fq[.gz] R2.fq[.gz]",
 	Version:               VERSION,
 	Short:                 "BLink-seq FASTQ barcode demultiplexer",
-	Long:                  "Demultiplex linked-read barcodes from raw FASTQ BLink-seq data. Uses an embedded schema by default; if a custom decoding configuration is required, include a Pheniqs-style decoder JSON.",
+	Long:                  "Demultiplex linked-read barcodes from raw FASTQ BLink-seq data for one sample. Uses an embedded schema by default; if a custom decoding configuration is required, include a Pheniqs-style decoder JSON.",
 	DisableFlagsInUseLine: true,
 	SilenceUsage:          true,
 	Args: func(cmd *cobra.Command, args []string) error {
