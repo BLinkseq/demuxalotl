@@ -20,4 +20,4 @@ jobs:
       - name: Demultiplex test files
         run: |
             bin/demuxolotl --threads 4 testing test/gih.R*.gz &&\
-            zcat testing.R1.gz | head
+            zcat testing.R1.fq.gz | head
