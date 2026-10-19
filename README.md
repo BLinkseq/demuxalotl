@@ -4,7 +4,7 @@ Demultiplex BLink-seq barcodes from raw FASTQ files.
 This is a small program, originally part of Harpy, that demultiplexes the linked-read barcodes out of raw BLink-seq FASTQ files.
 
 ## Install
-- requires Go
+- requires Go and Make
 ```bash
 git clone https://github.com/BLinkseq/demuxolotl.git
 cd demoxolotl
