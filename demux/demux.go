@@ -302,12 +302,12 @@ func Demux(r1, r2, prefix, meSeq, schema string, maxMM int, qxrx bool, threads i
 		return fmt.Errorf("Error writing output: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "Total read pairs processed:          %d\n", tot.total)
-	fmt.Fprintf(os.Stderr, "Total unique barcodes:               %d\n", len(bxSet))
-	fmt.Fprintf(os.Stderr, "Total reads with barcode failure:    %d\n", tot.qcfail)
-	fmt.Fprintf(os.Stderr, "Total reads with valid barcodes:     %d\n", tot.valid)
-	fmt.Fprintf(os.Stderr, "Total reads with corrected barcodes: %d\n", tot.corrected)
-	fmt.Fprintf(os.Stderr, "Discarded (ME sequence not found):   %d\n", tot.discarded)
+	fmt.Fprintf(os.Stdout, "Total read pairs processed:          %d\n", tot.total)
+	fmt.Fprintf(os.Stdout, "Total unique barcodes:               %d\n", len(bxSet))
+	fmt.Fprintf(os.Stdout, "Total reads with barcode failure:    %d\n", tot.qcfail)
+	fmt.Fprintf(os.Stdout, "Total reads with valid barcodes:     %d\n", tot.valid)
+	fmt.Fprintf(os.Stdout, "Total reads with corrected barcodes: %d\n", tot.corrected)
+	fmt.Fprintf(os.Stdout, "Discarded (ME sequence not found):   %d\n", tot.discarded)
 
 	return nil
 }
