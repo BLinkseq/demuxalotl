@@ -90,6 +90,7 @@ type worker struct {
 	seq, qual   []byte
 	bxSet       map[string]struct{}
 	st          stats
+	qxrx        bool
 }
 
 // process handles one pair. keep is false when the ME was not found.
@@ -125,9 +126,11 @@ func (w *worker) process(p *readPair, o1, o2 *bytes.Buffer) {
 	// decode D, A, B, C
 	var orig [4][]byte
 	var corr [4]string
+	var bcqual [4][]byte
 	qcFail, changed := false, false
 	for i, d := range w.decs {
 		orig[i] = w.seq[d.start:d.end]
+		bcqual[i] = w.qual[d.start:d.end]
 		idx, pass := d.decode(orig[i], w.qual[d.start:d.end])
 		if !pass {
 			qcFail = true
@@ -137,7 +140,7 @@ func (w *worker) process(p *readPair, o1, o2 *bytes.Buffer) {
 			changed = changed || corr[i] != string(orig[i])
 		}
 	}
-	// failed reads keep the observed barcode, passing reads the corrected one (as gih-convert)
+	// failed reads keep the observed barcode, passing reads the corrected one
 	var id [4]string
 	valid := 1
 	for i, d := range w.decs {
@@ -160,8 +163,19 @@ func (w *worker) process(p *readPair, o1, o2 *bytes.Buffer) {
 		w.st.corrected += 2
 	}
 
-	writeFastq(o1, fq1.name, "/1", bx, valid, w.seq[w.r1Start:], w.qual[w.r1Start:])
-	writeFastq(o2, fq2.name, "/2", bx, valid, fq2.seq, fq2.qual)
+	if !w.qxrx {
+		writeFastq(o1, fq1.name, "/1", bx, valid, w.seq[w.r1Start:], w.qual[w.r1Start:])
+		writeFastq(o2, fq2.name, "/2", bx, valid, fq2.seq, fq2.qual)
+	} else {
+		QX := make([]byte, 28)
+		RX := make([]byte, 28)
+		for i := range orig {
+			QX = append(QX, orig[i]...)
+			RX = append(RX, bcqual[i]...)
+		}
+		writeFastqQxRx(o1, fq1.name, "/1", bx, valid, QX, RX, w.seq[w.r1Start:], w.qual[w.r1Start:])
+		writeFastqQxRx(o2, fq2.name, "/2", bx, valid, QX, RX, fq2.seq, fq2.qual)
+	}
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
@@ -176,6 +190,7 @@ func fail(format string, a ...any) {
 func main() {
 	meSeq := flag.String("me", "AGATGTGTATAAGAGACAG", "ME sequence to search for")
 	maxMM := flag.Float64("max-mismatch", 2, "Maximum allowable ME mismatch score")
+	qxrx := flag.Bool("qx-rx", false, "Output tags QX:Z (barcode quality) and RX:Z (corrected barcode)")
 	schema := flag.String("schema", "", "Pheniqs-style JSON schema file with the barcodes and decoder settings (default: use embedded schema)")
 	nThreads := flag.Int("threads", 4, "Number of worker threads")
 	flag.Usage = func() {
@@ -240,7 +255,7 @@ func main() {
 
 	for range threads {
 		wg.Go(func() {
-			w := &worker{decs: decoders, r1Start: r1Start, me: []byte(strings.ToUpper(*meSeq)), maxMismatch: *maxMM, bxSet: map[string]struct{}{}}
+			w := &worker{decs: decoders, r1Start: r1Start, me: []byte(strings.ToUpper(*meSeq)), maxMismatch: *maxMM, bxSet: map[string]struct{}{}, qxrx: *qxrx}
 			for j := range jobs {
 				r := result{new(bytes.Buffer), new(bytes.Buffer)}
 				for i := range j.batch {

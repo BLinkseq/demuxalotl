@@ -27,7 +27,7 @@ type decoder struct {
 // noise and confidence filters (false == QC fail).
 //
 // Every float operation matches the naive per-barcode loop (same operands, same
-// order), so results are bit-identical; the speedup is only from hoisting the
+// order); the speedup is only from hoisting the
 // score lookups out of the barcode loop and scoring four barcodes at a time so
 // their independent Kahan chains overlap in the CPU pipeline.
 func (d *decoder) decode(obs, qual []byte) (best int, pass bool) {
@@ -73,7 +73,8 @@ func (d *decoder) decode(obs, qual []byte) (best int, pass bool) {
 	var bestP, bestCond float64
 	var sigma kahan
 	for b, c := range cond {
-		p := float64(c * d.conc) // explicit conversion: no fused multiply-add on arm64, same bits everywhere
+		// explicit conversion: no fused multiply-add on arm64, same bits everywhere
+		p := float64(c * d.conc)
 		sigma.add(p)
 		if p > bestP {
 			best, bestP, bestCond = b, p, c
@@ -123,7 +124,6 @@ func parseToken(t string) (start, end int, err error) {
 }
 
 // defaultSchema is used unless --schema names a file. It is a copy of
-// harpy/templates/pheniqs.config.json (a test keeps the two in sync).
 //
 //go:embed schema.json
 var defaultSchema []byte
@@ -169,7 +169,7 @@ func loadConfig(path string) (decs []*decoder, r1Start int, err error) {
 		for k := range cdc {
 			keys = append(keys, k)
 		}
-		// ponytail: pheniqs keeps file order for tie-breaking, sorted ids match it for the shipped config
+		// pheniqs keeps file order for tie-breaking, sorted ids match it for the shipped config
 		sort.Strings(keys)
 		for _, k := range keys {
 			if len(cdc[k].Barcode) == 0 {

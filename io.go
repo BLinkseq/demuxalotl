@@ -86,17 +86,44 @@ func (c closers) Close() (err error) {
 }
 
 // ----- FASTQ Writer ----------------------
+var BXTAG []byte = []byte{'\t', 'B', 'X', ':', 'Z', ':'}
+var VXTAG []byte = []byte{'\t', 'V', 'X', ':', 'i', ':'}
+var QXTAG []byte = []byte{'\t', 'Q', 'X', ':', 'Z', ':'}
+var RXTAG []byte = []byte{'\t', 'R', 'X', ':', 'Z', ':'}
+var NEWLINE []byte = []byte{'\n', '+', '\n'}
+
+// Write a FASTQ record to a buffer with BX:Z and VX:i tags
 func writeFastq(b *bytes.Buffer, name []byte, dir, bx string, vx int, seq, qual []byte) {
 	b.WriteByte('@')
 	b.Write(name)
 	b.WriteString(dir)
-	b.WriteString("\tVX:i:")
+	b.Write(VXTAG)
 	b.WriteByte(byte('0' + vx))
-	b.WriteString("\tBX:Z:")
+	b.Write(BXTAG)
 	b.WriteString(bx)
 	b.WriteByte('\n')
 	b.Write(seq)
-	b.WriteString("\n+\n")
+	b.Write(NEWLINE)
+	b.Write(qual)
+	b.WriteByte('\n')
+}
+
+// Write a FASTQ record to a buffer with BX:Z, VX:i, QX:Z, and RX:Z tags
+func writeFastqQxRx(b *bytes.Buffer, name []byte, dir, bx string, vx int, qx []byte, rx []byte, seq, qual []byte) {
+	b.WriteByte('@')
+	b.Write(name)
+	b.WriteString(dir)
+	b.Write(QXTAG)
+	b.Write(qx)
+	b.Write(RXTAG)
+	b.Write(rx)
+	b.Write(VXTAG)
+	b.WriteByte(byte('0' + vx))
+	b.Write(BXTAG)
+	b.WriteString(bx)
+	b.WriteByte('\n')
+	b.Write(seq)
+	b.Write(NEWLINE)
 	b.Write(qual)
 	b.WriteByte('\n')
 }
