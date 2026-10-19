@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -121,14 +122,26 @@ func parseToken(t string) (start, end int, err error) {
 	return
 }
 
+// defaultSchema is used unless --schema names a file. It is a copy of
+// harpy/templates/pheniqs.config.json (a test keeps the two in sync).
+//
+//go:embed schema.json
+var defaultSchema []byte
+
+// loadConfig builds the decoders from the schema file at path, or from the embedded
+// default schema when path is empty.
 func loadConfig(path string) (decs []*decoder, r1Start int, err error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, 0, err
+	data := defaultSchema
+	if path != "" {
+		if data, err = os.ReadFile(path); err != nil {
+			return nil, 0, err
+		}
 	}
-	defer f.Close()
 	var cfg config
-	if err = json.NewDecoder(f).Decode(&cfg); err != nil {
+	if err = json.Unmarshal(data, &cfg); err != nil {
+		if path != "" {
+			err = fmt.Errorf("%s: %w", path, err)
+		}
 		return
 	}
 	if len(cfg.Template.Transform.Token) == 0 {

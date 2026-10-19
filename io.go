@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -97,4 +99,28 @@ func writeFastq(b *bytes.Buffer, name []byte, dir, bx string, vx int, seq, qual 
 	b.WriteString("\n+\n")
 	b.Write(qual)
 	b.WriteByte('\n')
+}
+
+type gzOut struct {
+	f   *os.File
+	gz  *pgzip.Writer
+	buf *bufio.Writer
+}
+
+func newGzOut(path string, threads int) (*gzOut, error) {
+	f, err := os.Create(path)
+	if err != nil {
+		return nil, err
+	}
+	gz, err := pgzip.NewWriterLevel(f, 4)
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	gz.SetConcurrency(2<<20, threads)
+	return &gzOut{f, gz, bufio.NewWriterSize(gz, 2<<20)}, nil
+}
+
+func (o *gzOut) close() error {
+	return errors.Join(o.buf.Flush(), o.gz.Close(), o.f.Close())
 }

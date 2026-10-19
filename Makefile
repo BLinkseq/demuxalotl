@@ -5,4 +5,5 @@ all: demuxolotl
 demuxolotl:
 	@echo "Compiling demuxolotl"
 	mkdir -p bin/
-	go build -ldflags="-s -w" -o demuxolotl demux.go
+	rm -f bin/demuxolotl
+	go build -ldflags="-s -w" -o bin/demuxolotl demuxolotl.go decoder.go io.go pamld.go

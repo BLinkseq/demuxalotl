@@ -17,7 +17,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"flag"
@@ -28,7 +27,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/klauspost/pgzip"
 	"github.com/shenwei356/bio/seq"
 )
 
@@ -166,32 +164,6 @@ func (w *worker) process(p *readPair, o1, o2 *bytes.Buffer) {
 	writeFastq(o2, fq2.name, "/2", bx, valid, fq2.seq, fq2.qual)
 }
 
-// ── output ────────────────────────────────────────────────────────────────────
-
-type gzOut struct {
-	f   *os.File
-	gz  *pgzip.Writer
-	buf *bufio.Writer
-}
-
-func newGzOut(path string, threads int) (*gzOut, error) {
-	f, err := os.Create(path)
-	if err != nil {
-		return nil, err
-	}
-	gz, err := pgzip.NewWriterLevel(f, 4)
-	if err != nil {
-		f.Close()
-		return nil, err
-	}
-	gz.SetConcurrency(2<<20, threads)
-	return &gzOut{f, gz, bufio.NewWriterSize(gz, 2<<20)}, nil
-}
-
-func (o *gzOut) close() error {
-	return errors.Join(o.buf.Flush(), o.gz.Close(), o.f.Close())
-}
-
 // ── main ──────────────────────────────────────────────────────────────────────
 
 type result struct{ r1, r2 *bytes.Buffer }
@@ -203,23 +175,24 @@ func fail(format string, a ...any) {
 
 func main() {
 	meSeq := flag.String("me", "AGATGTGTATAAGAGACAG", "ME sequence to search for")
-	statsfile := flag.String("stats", "stats.txt", "File name for ME stats output")
 	maxMM := flag.Float64("max-mismatch", 2, "Maximum allowable ME mismatch score")
+	schema := flag.String("schema", "", "Pheniqs-style JSON schema file with the barcodes and decoder settings (default: use embedded schema)")
 	nThreads := flag.Int("threads", 4, "Number of worker threads")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: gih-demux [options] <prefix> <pheniqs.json> <R1.fq[.gz]> <R2.fq[.gz]>\n\nOptions:\n")
+		fmt.Fprintf(os.Stderr, "Demultiplex linked-read barcodes from raw FASTQ BLink-seq data. Uses an embedded schema by default; if a custom decoding configuration is required, include a Pheniqs-style decoder JSON.\n")
+		fmt.Fprintf(os.Stderr, "Usage: demuxolotl [options] prefix R1.fq[.gz] R2.fq[.gz]\n\nOptions:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	args := flag.Args()
-	if len(args) != 5 {
+	if len(args) != 3 {
 		flag.Usage()
 		os.Exit(1)
 	}
 	threads := min(max(*nThreads, 1), runtime.NumCPU())
 	runtime.GOMAXPROCS(threads)
 
-	decs, r1Start, err := loadConfig(args[0])
+	decoders, r1Start, err := loadConfig(*schema)
 	if err != nil {
 		fail("Error reading config: %v", err)
 	}
@@ -228,14 +201,14 @@ func main() {
 	seq.ValidateSeq = false // reads may hold N and other IUPAC codes, and nothing downstream needs them checked
 
 	//---- R1 fastq reader -----------------
-	rdr1, err := newFastqReader(args[2], gzBlocks)
+	rdr1, err := newFastqReader(args[1], gzBlocks)
 	if err != nil {
 		fail("Error opening R1: %v", err)
 	}
 	defer rdr1.Close()
 
 	//---- R2 fastq reader -----------------
-	rdr2, err := newFastqReader(args[3], gzBlocks)
+	rdr2, err := newFastqReader(args[2], gzBlocks)
 	if err != nil {
 		fail("Error opening R2: %v", err)
 	}
@@ -267,7 +240,7 @@ func main() {
 
 	for range threads {
 		wg.Go(func() {
-			w := &worker{decs: decs, r1Start: r1Start, me: []byte(strings.ToUpper(*meSeq)), maxMismatch: *maxMM, bxSet: map[string]struct{}{}}
+			w := &worker{decs: decoders, r1Start: r1Start, me: []byte(strings.ToUpper(*meSeq)), maxMismatch: *maxMM, bxSet: map[string]struct{}{}}
 			for j := range jobs {
 				r := result{new(bytes.Buffer), new(bytes.Buffer)}
 				for i := range j.batch {
@@ -340,18 +313,10 @@ func main() {
 		fail("Error writing output: %v", err)
 	}
 
-	sf, err := os.Create(*statsfile)
-	if err != nil {
-		fail("Error creating stats file: %v", err)
-	}
-	_, err1 := fmt.Fprintf(sf, "Total read pairs processed:           %d\n", tot.total)
-	_, err2 := fmt.Fprintf(sf, "Discarded (ME sequence not found):    %d\n", tot.discarded)
-	if err := errors.Join(err1, err2, sf.Close()); err != nil {
-		fail("Error writing stats file: %v", err)
-	}
-
-	fmt.Printf("Total unique barcodes:               %d\n", len(bxSet))
-	fmt.Printf("Total reads with barcode failure:    %d\n", tot.qcfail)
-	fmt.Printf("Total reads with valid barcodes:     %d\n", tot.valid)
-	fmt.Printf("Total reads with corrected barcodes: %d\n", tot.corrected)
+	fmt.Fprintf(os.Stderr, "Total read pairs processed:          %d\n", tot.total)
+	fmt.Fprintf(os.Stderr, "Total unique barcodes:               %d\n", len(bxSet))
+	fmt.Fprintf(os.Stderr, "Total reads with barcode failure:    %d\n", tot.qcfail)
+	fmt.Fprintf(os.Stderr, "Total reads with valid barcodes:     %d\n", tot.valid)
+	fmt.Fprintf(os.Stderr, "Total reads with corrected barcodes: %d\n", tot.corrected)
+	fmt.Fprintf(os.Stderr, "Discarded (ME sequence not found):   %d\n", tot.discarded)
 }
