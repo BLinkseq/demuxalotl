@@ -6,9 +6,12 @@ This is a small program, originally part of Harpy, that demultiplexes the linked
 ## Install
 - requires Go
 ```bash
-
+git clone https://github.com/BLinkseq/demuxolotl.git
+cd demoxolotl
 make
 ```
+The binary gets written to `bin/demoxolotl`. You can use it from there or copy/move it to a location in your PATH.
+
 
 ## Run
 ```bash
