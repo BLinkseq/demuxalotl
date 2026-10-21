@@ -2,6 +2,8 @@
 Demultiplex BLink-seq barcodes from raw FASTQ files.
 
 This is a small program, originally part of Harpy, that demultiplexes the linked-read barcodes out of raw BLink-seq FASTQ files.
+It's intended to work on data that's already been demultiplexed at the sample level, which should have been done by the sequencing
+facility (NovaSeq).
 
 ## Install
 - requires Go and Make
@@ -58,4 +60,4 @@ When looking for the ME sequence, this is the maximum mismatch score you're will
 The `RX:Z` tag records the _corrected_ nucleotide barcode. The original observed barcode is only given if an unrecognized barcode couldn't be corrected. The `QX:Z` tag is the PHRED score of the barcode. Both tags are optional and aren't used by any downstream software we know if-- they are for diagnostic purposes.
 
 ### Schema
-This program ports over the PAMLD algorithm and decoding logic from [Pheniqs](https://github.com/biosails/pheniqs), stripping all the extra features BLink-seq doesn't need. Given the Pheniqs origins, we continue to use a pheniqs configuration file for decoding barcodes. If using the default BLink-seq chemistry, you will not need to include your own schema file. 
+This program ports over the PAMLD algorithm and decoding logic from [Pheniqs](https://github.com/biosails/pheniqs), stripping all the extra features BLink-seq doesn't need. Given the Pheniqs origins, we continue to use a pheniqs configuration file for decoding barcodes. If using the default BLink-seq chemistry, you will not need to include your own schema file.
