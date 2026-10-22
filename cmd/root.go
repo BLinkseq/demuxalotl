@@ -23,8 +23,8 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:          true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			fmt.Printf("%s", cmd.UsageString())
-			return fmt.Errorf("please provide input an output file prefix and input FASTQ files")
+			fmt.Printf("%s\n", cmd.UsageString())
+			return fmt.Errorf("please provide positional arguments: an output file prefix and input FASTQ files")
 		}
 		if err := cobra.ExactArgs(3)(cmd, args); err != nil {
 			return err
